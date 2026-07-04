@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Survival</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1a14">
+<style>
+  :root{
+    --bg:#0f1a14;
+    --card:#16241c;
+    --accent:#6fbf73;
+    --text:#eef5ef;
+    --muted:#9db3a3;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,Roboto,Segoe UI,sans-serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  header{
+    padding:28px 20px 10px;
+    text-align:center;
+  }
+  header h1{
+    margin:0;
+    font-size:28px;
+    letter-spacing:1px;
+  }
+  header p{
+    margin:6px 0 0;
+    color:var(--muted);
+    font-size:14px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    padding:20px;
+    max-width:520px;
+    margin:0 auto;
+  }
+  .tile{
+    background:var(--card);
+    border:1px solid #22352a;
+    border-radius:18px;
+    padding:22px 14px;
+    text-align:center;
+    text-decoration:none;
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    min-height:120px;
+    justify-content:center;
+    transition:transform .1s ease, background .15s ease;
+  }
+  .tile:active{
+    transform:scale(0.96);
+    background:#1c2e22;
+  }
+  .tile .icon{
+    font-size:34px;
+  }
+  .tile .label{
+    font-size:15px;
+    font-weight:600;
+  }
+  .tile .sub{
+    font-size:11px;
+    color:var(--muted);
+  }
+  .full{
+    grid-column:1 / -1;
+  }
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    padding:20px;
+  }
+  #camModal{
+    position:fixed; inset:0; background:#000;
+    display:none; z-index:999;
+    flex-direction:column;
+  }
+  #camModal.open{display:flex;}
+  #camVideo{flex:1; width:100%; object-fit:cover;}
+  #camControls{
+    padding:16px; display:flex; gap:12px; justify-content:center; align-items:center;
+    background:#000;
+  }
+  #camControls button{
+    background:var(--accent); color:#0f1a14; border:none;
+    border-radius:12px; padding:12px 18px; font-size:15px; font-weight:600;
+  }
+  #zoomRange{width:60%;}
+
+  #torchModal{
+    position:fixed; inset:0; z-index:998;
+    display:none; flex-direction:column;
+    background:#000;
+  }
+  #torchModal.open{display:flex;}
+  #torchModal.whiteMode{background:#fff;}
+  #torchStatus{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    color:#555; font-size:15px; text-align:center; padding:20px;
+  }
+  #torchModal.whiteMode #torchStatus{color:#222;}
+  #closeTorch{
+    margin:16px; align-self:center;
+    background:var(--accent); color:#0f1a14; border:none;
+    border-radius:12px; padding:12px 22px; font-size:15px; font-weight:600;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎒 Survival</h1>
+  <p>Alles bij de hand, niets diep zoeken</p>
+  <button id="editToggle" style="margin-top:10px; background:none; border:1px solid #22352a; color:var(--muted); border-radius:10px; padding:6px 14px; font-size:13px;">✏️ Bewerken</button>
+</header>
+
+<div class="grid">
+
+  <div id="linkTiles" style="display:contents;"></div>
+
+  <button class="tile" id="magBtn" style="border:1px solid #22352a; cursor:pointer;">
+    <div class="icon">🔍</div>
+    <div class="label">Vergrootglas</div>
+    <div class="sub">Camera met zoom</div>
+  </button>
+
+  <button class="tile" id="torchTileBtn" style="border:1px solid #22352a; cursor:pointer;">
+    <div class="icon">🔦</div>
+    <div class="label">Zaklamp</div>
+    <div class="sub">Direct aan</div>
+  </button>
+
+</div>
+
+<footer>Jan den Hollander · vrij en niet-commercieel</footer>
+
+<div id="camModal">
+  <video id="camVideo" autoplay playsinline></video>
+  <div id="camControls">
+    <button id="closeCam">Sluiten</button>
+    <input id="zoomRange" type="range" min="1" max="5" step="0.1" value="1">
+    <button id="torchBtn">🔦</button>
+  </div>
+</div>
+
+<div id="torchModal">
+  <div id="torchStatus">Zaklamp wordt ingeschakeld…</div>
+  <button id="closeTorch">Sluiten</button>
+</div>
+
+<script>
+const DEFAULT_LINKS = [
+  { id:'sammy', icon:'💶', label:'Sammy', sub:'Financiën', url:'https://VUL-HIER-SAMMY-URL-IN.vercel.app' },
+  { id:'kompas', icon:'🧭', label:'Kompas', sub:'Terrein / GPS', url:'https://VUL-HIER-KOMPAS-URL-IN.vercel.app' },
+  { id:'morse', icon:'📡', label:'Morse', sub:'Noodsignaal', url:'https://VUL-HIER-MORSE-URL-IN.vercel.app' },
+  { id:'scam', icon:'🛡️', label:'Scam Detector', sub:'Fraude check', url:'https://scam-detector-three-blond.vercel.app' }
+];
+
+let editMode = false;
+
+function loadLinks(){
+  try{
+    const saved = localStorage.getItem('survivalLinks');
+    if(saved) return JSON.parse(saved);
+  }catch(e){}
+  return DEFAULT_LINKS;
+}
+
+function saveLinks(links){
+  localStorage.setItem('survivalLinks', JSON.stringify(links));
+}
+
+function renderLinks(){
+  const links = loadLinks();
+  const container = document.getElementById('linkTiles');
+  container.innerHTML = '';
+
+  links.forEach(link => {
+    const el = document.createElement(editMode ? 'button' : 'a');
+    el.className = 'tile';
+    if(!editMode){
+      el.href = link.url;
+      el.target = '_blank';
+    } else {
+      el.style.border = '1px dashed var(--accent)';
+      el.style.cursor = 'pointer';
+    }
+    el.innerHTML = `
+      <div class="icon">${link.icon}</div>
+      <div class="label">${link.label}${editMode ? ' ✏️' : ''}</div>
+      <div class="sub">${editMode ? link.url : link.sub}</div>
+    `;
+    if(editMode){
+      el.addEventListener('click', () => {
+        const newUrl = prompt('Link voor "' + link.label + '":', link.url);
+        if(newUrl !== null && newUrl.trim() !== ''){
+          link.url = newUrl.trim();
+          const all = loadLinks();
+          const idx = all.findIndex(l => l.id === link.id);
+          if(idx > -1){ all[idx] = link; saveLinks(all); }
+          renderLinks();
+        }
+      });
+    }
+    container.appendChild(el);
+  });
+}
+
+document.getElementById('editToggle').addEventListener('click', () => {
+  editMode = !editMode;
+  document.getElementById('editToggle').textContent = editMode ? '✅ Klaar' : '✏️ Bewerken';
+  renderLinks();
+});
+
+renderLinks();
+
+let stream, track;
+const modal = document.getElementById('camModal');
+const video = document.getElementById('camVideo');
+const zoomRange = document.getElementById('zoomRange');
+const torchBtn = document.getElementById('torchBtn');
+let torchOn = false;
+
+document.getElementById('magBtn').addEventListener('click', async () => {
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }
+    });
+    video.srcObject = stream;
+    track = stream.getVideoTracks()[0];
+    modal.classList.add('open');
+
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (caps.zoom) {
+      zoomRange.min = caps.zoom.min;
+      zoomRange.max = caps.zoom.max;
+      zoomRange.step = caps.zoom.step || 0.1;
+    }
+  }catch(e){
+    alert('Camera niet beschikbaar: ' + e.message);
+  }
+});
+
+zoomRange.addEventListener('input', () => {
+  if(!track) return;
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if(caps.zoom){
+    track.applyConstraints({ advanced: [{ zoom: parseFloat(zoomRange.value) }] }).catch(()=>{});
+  } else {
+    video.style.transform = 'scale(' + zoomRange.value + ')';
+  }
+});
+
+torchBtn.addEventListener('click', () => {
+  if(!track) return;
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if(caps.torch){
+    torchOn = !torchOn;
+    track.applyConstraints({ advanced: [{ torch: torchOn }] }).catch(()=>{});
+  } else {
+    alert('Zaklamp niet ondersteund op dit toestel');
+  }
+});
+
+document.getElementById('closeCam').addEventListener('click', () => {
+  if(stream) stream.getTracks().forEach(t => t.stop());
+  modal.classList.remove('open');
+  video.style.transform = 'none';
+});
+
+let torchStream = null;
+const torchModal = document.getElementById('torchModal');
+const torchStatus = document.getElementById('torchStatus');
+
+document.getElementById('torchTileBtn').addEventListener('click', async () => {
+  torchModal.classList.add('open');
+  torchModal.classList.remove('whiteMode');
+  torchStatus.textContent = 'Zaklamp wordt ingeschakeld…';
+
+  try{
+    torchStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }
+    });
+    const torchTrack = torchStream.getVideoTracks()[0];
+    const caps = torchTrack.getCapabilities ? torchTrack.getCapabilities() : {};
+
+    if (caps.torch) {
+      await torchTrack.applyConstraints({ advanced: [{ torch: true }] });
+      torchStatus.textContent = 'Zaklamp aan';
+    } else {
+      throw new Error('geen hardware-zaklamp');
+    }
+  } catch(e){
+    // Fallback: fel wit scherm als improvisatie-licht
+    if (torchStream) { torchStream.getTracks().forEach(t => t.stop()); torchStream = null; }
+    torchModal.classList.add('whiteMode');
+    torchStatus.textContent = 'Geen hardware-zaklamp gevonden — scherm gebruikt als noodlicht';
+  }
+});
+
+document.getElementById('closeTorch').addEventListener('click', () => {
+  if (torchStream) {
+    const t = torchStream.getVideoTracks()[0];
+    if (t && t.getCapabilities && t.getCapabilities().torch) {
+      t.applyConstraints({ advanced: [{ torch: false }] }).catch(()=>{});
+    }
+    torchStream.getTracks().forEach(tr => tr.stop());
+    torchStream = null;
+  }
+  torchModal.classList.remove('open');
+  torchModal.classList.remove('whiteMode');
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('data:application/javascript,self.addEventListener("fetch",()=>{});').catch(()=>{});
+}
+</script>
+
+</body>
+</html>
