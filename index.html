@@ -118,13 +118,27 @@
     background:var(--accent); color:#0f1a14; border:none;
     border-radius:12px; padding:12px 22px; font-size:15px; font-weight:600;
   }
+
+  #alarmModal{
+    position:fixed; inset:0; z-index:997;
+    display:none; flex-direction:column;
+    align-items:center; justify-content:center;
+    background:#2a0d0d;
+  }
+  #alarmModal.open{display:flex;}
+  #alarmModal.flash{background:#c0392b;}
+  #alarmIcon{font-size:80px; margin-bottom:20px;}
+  #closeAlarm{
+    background:#fff; color:#2a0d0d; border:none;
+    border-radius:12px; padding:14px 28px; font-size:16px; font-weight:700;
+  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>🎒 Survival</h1>
-  <p>Alles bij de hand, niets diep zoeken</p>
+  <p id="appSubtitle">Alles bij de hand, niets diep zoeken</p>
   <button id="editToggle" style="margin-top:10px; background:none; border:1px solid #22352a; color:var(--muted); border-radius:10px; padding:6px 14px; font-size:13px;">✏️ Bewerken</button>
 </header>
 
@@ -134,19 +148,31 @@
 
   <button class="tile" id="magBtn" style="border:1px solid #22352a; cursor:pointer;">
     <div class="icon">🔍</div>
-    <div class="label">Vergrootglas</div>
-    <div class="sub">Camera met zoom</div>
+    <div class="label" id="magLabel">Vergrootglas</div>
+    <div class="sub" id="magSub">Camera met zoom</div>
   </button>
 
   <button class="tile" id="torchTileBtn" style="border:1px solid #22352a; cursor:pointer;">
     <div class="icon">🔦</div>
-    <div class="label">Zaklamp</div>
-    <div class="sub">Direct aan</div>
+    <div class="label" id="torchLabel">Zaklamp</div>
+    <div class="sub" id="torchSub">Direct aan</div>
+  </button>
+
+  <button class="tile" id="langTileBtn" style="border:1px solid #22352a; cursor:pointer;">
+    <div class="icon">🌐</div>
+    <div class="label" id="langLabel">Taal</div>
+    <div class="sub" id="langSub">NL</div>
+  </button>
+
+  <button class="tile full" id="alarmTileBtn" style="border:1px solid #22352a; cursor:pointer;">
+    <div class="icon">🚨</div>
+    <div class="label" id="alarmLabel">Alarm</div>
+    <div class="sub" id="alarmSub">Doordringend geluid</div>
   </button>
 
 </div>
 
-<footer>Jan den Hollander · vrij en niet-commercieel</footer>
+<footer id="footerText">Jan den Hollander · vrij en niet-commercieel</footer>
 
 <div id="camModal">
   <video id="camVideo" autoplay playsinline></video>
@@ -162,12 +188,84 @@
   <button id="closeTorch">Sluiten</button>
 </div>
 
+<div id="alarmModal">
+  <div id="alarmIcon">🚨</div>
+  <button id="closeAlarm">Stop alarm</button>
+</div>
+
 <script>
+const TRANSLATIONS = {
+  nl: {
+    subtitle: 'Alles bij de hand, niets diep zoeken',
+    edit: '✏️ Bewerken',
+    editDone: '✅ Klaar',
+    footer: 'Jan den Hollander · vrij en niet-commercieel',
+    magLabel: 'Vergrootglas', magSub: 'Camera met zoom',
+    torchLabel: 'Zaklamp', torchSub: 'Direct aan',
+    langLabel: 'Taal', langSub: 'NL',
+    alarmLabel: 'Alarm', alarmSub: 'Doordringend geluid',
+    linkSubs: { sammy:'Financiën', kompas:'Terrein / GPS', morse:'Noodsignaal', scam:'Fraude check', vogel:'Bewegingsdetectie' }
+  },
+  it: {
+    subtitle: 'Tutto a portata di mano, senza cercare a lungo',
+    edit: '✏️ Modifica',
+    editDone: '✅ Fatto',
+    footer: 'Jan den Hollander · gratuito e non commerciale',
+    magLabel: 'Lente', magSub: 'Fotocamera con zoom',
+    torchLabel: 'Torcia', torchSub: 'Accensione diretta',
+    langLabel: 'Lingua', langSub: 'IT',
+    alarmLabel: 'Allarme', alarmSub: 'Suono penetrante',
+    linkSubs: { sammy:'Finanze', kompas:'Terreno / GPS', morse:'Segnale SOS', scam:'Controllo truffe', vogel:'Rilevamento movimento' }
+  },
+  en: {
+    subtitle: 'Everything within reach, nothing to dig for',
+    edit: '✏️ Edit',
+    editDone: '✅ Done',
+    footer: 'Jan den Hollander · free and non-commercial',
+    magLabel: 'Magnifier', magSub: 'Camera with zoom',
+    torchLabel: 'Flashlight', torchSub: 'Turn on directly',
+    langLabel: 'Language', langSub: 'EN',
+    alarmLabel: 'Alarm', alarmSub: 'Piercing sound',
+    linkSubs: { sammy:'Finance', kompas:'Terrain / GPS', morse:'SOS signal', scam:'Scam check', vogel:'Motion detection' }
+  }
+};
+const LANG_ORDER = ['nl', 'it', 'en'];
+
+function getLang(){
+  return localStorage.getItem('survivalLang') || 'nl';
+}
+
+function applyTranslations(){
+  const lang = getLang();
+  const t = TRANSLATIONS[lang];
+  document.getElementById('appSubtitle').textContent = t.subtitle;
+  document.getElementById('editToggle').textContent = editMode ? t.editDone : t.edit;
+  document.getElementById('footerText').textContent = t.footer;
+  document.getElementById('magLabel').textContent = t.magLabel;
+  document.getElementById('magSub').textContent = t.magSub;
+  document.getElementById('torchLabel').textContent = t.torchLabel;
+  document.getElementById('torchSub').textContent = t.torchSub;
+  document.getElementById('langLabel').textContent = t.langLabel;
+  document.getElementById('langSub').textContent = t.langSub;
+  document.getElementById('alarmLabel').textContent = t.alarmLabel;
+  document.getElementById('alarmSub').textContent = t.alarmSub;
+  document.documentElement.lang = lang;
+}
+
+document.getElementById('langTileBtn').addEventListener('click', () => {
+  const current = getLang();
+  const next = LANG_ORDER[(LANG_ORDER.indexOf(current) + 1) % LANG_ORDER.length];
+  localStorage.setItem('survivalLang', next);
+  applyTranslations();
+  renderLinks();
+});
+
 const DEFAULT_LINKS = [
   { id:'sammy', icon:'💶', label:'Sammy', sub:'Financiën', url:'https://VUL-HIER-SAMMY-URL-IN.vercel.app' },
   { id:'kompas', icon:'🧭', label:'Kompas', sub:'Terrein / GPS', url:'https://VUL-HIER-KOMPAS-URL-IN.vercel.app' },
   { id:'morse', icon:'📡', label:'Morse', sub:'Noodsignaal', url:'https://VUL-HIER-MORSE-URL-IN.vercel.app' },
-  { id:'scam', icon:'🛡️', label:'Scam Detector', sub:'Fraude check', url:'https://scam-detector-three-blond.vercel.app' }
+  { id:'scam', icon:'🛡️', label:'Scam Detector', sub:'Fraude check', url:'https://scam-detector-three-blond.vercel.app' },
+  { id:'vogel', icon:'🐦', label:'Vogelverklikker', sub:'Bewegingsdetectie', url:'https://VUL-HIER-VOGEL-URL-IN.vercel.app' }
 ];
 
 let editMode = false;
@@ -186,10 +284,13 @@ function saveLinks(links){
 
 function renderLinks(){
   const links = loadLinks();
+  const lang = getLang();
+  const linkSubs = TRANSLATIONS[lang].linkSubs;
   const container = document.getElementById('linkTiles');
   container.innerHTML = '';
 
   links.forEach(link => {
+    const displaySub = linkSubs[link.id] || link.sub;
     const el = document.createElement(editMode ? 'button' : 'a');
     el.className = 'tile';
     if(!editMode){
@@ -202,7 +303,7 @@ function renderLinks(){
     el.innerHTML = `
       <div class="icon">${link.icon}</div>
       <div class="label">${link.label}${editMode ? ' ✏️' : ''}</div>
-      <div class="sub">${editMode ? link.url : link.sub}</div>
+      <div class="sub">${editMode ? link.url : displaySub}</div>
     `;
     if(editMode){
       el.addEventListener('click', () => {
@@ -222,10 +323,11 @@ function renderLinks(){
 
 document.getElementById('editToggle').addEventListener('click', () => {
   editMode = !editMode;
-  document.getElementById('editToggle').textContent = editMode ? '✅ Klaar' : '✏️ Bewerken';
+  applyTranslations();
   renderLinks();
 });
 
+applyTranslations();
 renderLinks();
 
 let stream, track;
@@ -293,22 +395,32 @@ document.getElementById('torchTileBtn').addEventListener('click', async () => {
 
   try{
     torchStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' } }
+      video: {
+        facingMode: { exact: 'environment' },
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      }
     });
     const torchTrack = torchStream.getVideoTracks()[0];
+
+    // Sommige Android-toestellen geven pas correcte capabilities
+    // nadat de track echt 'live' is gestart — daarom een korte wachttijd.
+    await new Promise(r => setTimeout(r, 300));
+
     const caps = torchTrack.getCapabilities ? torchTrack.getCapabilities() : {};
 
     if (caps.torch) {
       await torchTrack.applyConstraints({ advanced: [{ torch: true }] });
       torchStatus.textContent = 'Zaklamp aan';
     } else {
-      throw new Error('geen hardware-zaklamp');
+      throw { debug: caps };
     }
   } catch(e){
     // Fallback: fel wit scherm als improvisatie-licht
     if (torchStream) { torchStream.getTracks().forEach(t => t.stop()); torchStream = null; }
     torchModal.classList.add('whiteMode');
-    torchStatus.textContent = 'Geen hardware-zaklamp gevonden — scherm gebruikt als noodlicht';
+    const debugInfo = e && e.debug ? JSON.stringify(e.debug) : (e && e.message ? e.message : 'onbekend');
+    torchStatus.innerHTML = 'Geen hardware-zaklamp aangesproken op dit toestel.<br>Scherm gebruikt als noodlicht.<br><br><span style="font-size:10px; opacity:.6;">debug: ' + debugInfo + '</span>';
   }
 });
 
@@ -328,6 +440,52 @@ document.getElementById('closeTorch').addEventListener('click', () => {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('data:application/javascript,self.addEventListener("fetch",()=>{});').catch(()=>{});
 }
+
+// --- Alarm / sirene ---
+let audioCtx = null, oscillator = null, gainNode = null, sirenInterval = null, flashInterval = null;
+const alarmModal = document.getElementById('alarmModal');
+
+function startSiren(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  oscillator = audioCtx.createOscillator();
+  gainNode = audioCtx.createGain();
+  oscillator.type = 'square';
+  gainNode.gain.value = 1.0;
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  oscillator.start();
+
+  let up = true;
+  sirenInterval = setInterval(() => {
+    const target = up ? 1400 : 700;
+    oscillator.frequency.linearRampToValueAtTime(target, audioCtx.currentTime + 0.4);
+    up = !up;
+  }, 400);
+
+  let flash = false;
+  flashInterval = setInterval(() => {
+    alarmModal.classList.toggle('flash', flash);
+    flash = !flash;
+  }, 400);
+}
+
+function stopSiren(){
+  if(sirenInterval) clearInterval(sirenInterval);
+  if(flashInterval) clearInterval(flashInterval);
+  if(oscillator){ oscillator.stop(); oscillator.disconnect(); oscillator = null; }
+  if(audioCtx){ audioCtx.close(); audioCtx = null; }
+  alarmModal.classList.remove('flash');
+}
+
+document.getElementById('alarmTileBtn').addEventListener('click', () => {
+  alarmModal.classList.add('open');
+  startSiren();
+});
+
+document.getElementById('closeAlarm').addEventListener('click', () => {
+  stopSiren();
+  alarmModal.classList.remove('open');
+});
 </script>
 
 </body>
