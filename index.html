@@ -271,11 +271,27 @@ const DEFAULT_LINKS = [
 let editMode = false;
 
 function loadLinks(){
+  let saved = null;
   try{
-    const saved = localStorage.getItem('survivalLinks');
-    if(saved) return JSON.parse(saved);
+    const raw = localStorage.getItem('survivalLinks');
+    if(raw) saved = JSON.parse(raw);
   }catch(e){}
-  return DEFAULT_LINKS;
+
+  if(!saved) return DEFAULT_LINKS.slice();
+
+  // Nieuwe tegels die later aan DEFAULT_LINKS zijn toegevoegd (zoals Vogelverklikker)
+  // stonden nog niet in een eerder opgeslagen lijst. Die vullen we hier alsnog aan,
+  // zonder de al ingevulde/bewerkte URL's van bestaande tegels te overschrijven.
+  const savedIds = new Set(saved.map(l => l.id));
+  const aangevuld = saved.slice();
+  DEFAULT_LINKS.forEach(def => {
+    if(!savedIds.has(def.id)) aangevuld.push(def);
+  });
+
+  if(aangevuld.length !== saved.length){
+    saveLinks(aangevuld);
+  }
+  return aangevuld;
 }
 
 function saveLinks(links){
